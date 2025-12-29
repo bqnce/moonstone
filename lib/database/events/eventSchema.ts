@@ -10,6 +10,10 @@ export interface IEvent {
   delta: number;      // The change amount (e.g., -50 or +1000)
   balanceAfter: number; // Snapshot of balance after transaction
   currency: string;
+  metadata?: {
+    month?: string; 
+    note?: string;
+  };
   timestamp: Date;
 }
 
@@ -54,6 +58,10 @@ const EventSchema = new Schema<IEvent>({
     type: Date, 
     default: Date.now,
     index: true // Indexed for sorting history by date
+  },
+  metadata: {
+    month: { type: String, required: false },
+    note: { type: String, required: false }
   }
 });
 

@@ -19,6 +19,7 @@ import {
 
 // --- Types ---
 interface ManualAsset {
+  _id: string; // FONTOS: Szükséges a backend azonosításhoz
   category: string;
   subCategory?: string;
   subcategory?: string; // Handling DB inconsistency
@@ -31,8 +32,8 @@ interface AccountsData {
   _id: string;
   userId: string;
   manualAssets: ManualAsset[];
-  updatedAt?: string; // Add this field
-  lastUpdated?: string; // Keep for fallback}
+  updatedAt?: string;
+  lastUpdated?: string;
 }
 
 // --- Constants ---
@@ -63,7 +64,6 @@ const formatHuf = (amount: number) => {
 const formatLastUpdated = (dateString?: string) => {
   if (!dateString) return "";
   const date = new Date(dateString);
-  // Returns format like: "Dec 28, 1:20 PM"
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
     day: "numeric",
@@ -98,28 +98,32 @@ export default function AccountsPage() {
   const [error, setError] = useState("");
 
   // --- UI State ---
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null); // Uses unique ID `${category}-${index}`
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  
+  // State az editáláshoz
   const [editingAsset, setEditingAsset] = useState<{
-    id: string;
+    id: string; // Ez most már a MongoDB _id lesz
     asset: ManualAsset;
   } | null>(null);
+  
   const [newBalance, setNewBalance] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
 
   // --- Fetch Data ---
+  const fetchData = async () => {
+    try {
+      const res = await fetch("/api/accounts");
+      if (!res.ok) throw new Error("Failed to fetch accounts");
+      const jsonData = await res.json();
+      setData(jsonData);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch("/api/accounts");
-        if (!res.ok) throw new Error("Failed to fetch accounts");
-        const jsonData = await res.json();
-        setData(jsonData);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
@@ -134,47 +138,42 @@ export default function AccountsPage() {
   }, []);
 
   // --- Handlers ---
-  const handleEditClick = (uniqueId: string, asset: ManualAsset) => {
-    setEditingAsset({ id: uniqueId, asset });
+  
+  // 1. Megnyitja a modalt
+  const handleEditClick = (mongoId: string, asset: ManualAsset) => {
+    setEditingAsset({ id: mongoId, asset }); // Elmentjük az ID-t a küldéshez
     setNewBalance(asset.balance.toString());
     setActiveDropdown(null);
   };
 
+  // 2. Elküldi az új adatokat a backendnek
   const handleSaveBalance = async () => {
     if (!editingAsset) return;
 
     setIsSaving(true);
     try {
-      const response = await fetch("/api/accounts", {
-        method: "PUT",
+      // API HÍVÁS A DELTA LOGOLÁSHOZ
+      const response = await fetch("/api/accounts/update-balance", {
+        method: "POST", // POST, mert ez egy action (update + log)
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          label: editingAsset.asset.label,
+          accountId: editingAsset.id, // A MongoDB _id-t küldjük
           newBalance: parseFloat(newBalance),
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to update");
-
-      // Update Local State immediately
-      if (data) {
-        const updatedAssets = data.manualAssets.map((asset) => {
-          if (asset.label === editingAsset.asset.label) {
-            return { ...asset, balance: parseFloat(newBalance) };
-          }
-          return asset;
-        });
-
-        setData({
-          ...data,
-          manualAssets: updatedAssets,
-          updatedAt: new Date().toISOString(), // <--- Update the timestamp locally!
-        });
+      if (!response.ok) {
+         const err = await response.json();
+         throw new Error(err.error || "Failed to update");
       }
 
+      // Sikeres mentés után újratöltjük az adatokat, hogy minden frissüljön (history, timestamp, balance)
+      await fetchData();
+      
       setEditingAsset(null);
     } catch (error) {
       console.error("Error updating balance:", error);
+      alert("Failed to update balance. Check console.");
     } finally {
       setIsSaving(false);
     }
@@ -275,7 +274,7 @@ export default function AccountsPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {assets.map((asset, index) => {
-                const uniqueId = `${category}-${index}`; // Create unique ID for dropdown logic
+                const uniqueId = `${category}-${index}`; // UI ID a dropdownhoz
 
                 return (
                   <div
@@ -311,8 +310,9 @@ export default function AccountsPage() {
                         {activeDropdown === uniqueId && (
                           <div className="absolute right-0 top-8 w-40 bg-zinc-950 border border-zinc-800 rounded-lg shadow-xl z-20 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
                             <div className="py-1">
+                              {/* EDIT BUTTON: Itt adjuk át az _id-t */}
                               <button
-                                onClick={() => handleEditClick(uniqueId, asset)}
+                                onClick={() => handleEditClick(asset._id, asset)}
                                 className="w-full text-left px-4 py-2 text-sm text-zinc-300 hover:bg-zinc-900 hover:text-white flex items-center gap-2 cursor-pointer"
                               >
                                 <Pencil className="w-3 h-3" /> Edit Balance

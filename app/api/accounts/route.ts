@@ -31,7 +31,6 @@ export async function GET() {
       }, { status: 404 });
     }
 
-    console.log(userData);
     return NextResponse.json(userData);
 
   } catch (error: any) {
