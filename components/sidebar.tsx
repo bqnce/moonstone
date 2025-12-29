@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, User, BarChart3, Settings, Wallet, LogOut, BanknoteArrowUp } from "lucide-react";
+import { LayoutDashboard, User, BarChart3, Settings, Wallet, LogOut, BanknoteArrowUp, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession, signOut } from "next-auth/react";
 import logo from "@/images/logo.png";
@@ -28,6 +28,11 @@ const menuItems = [
     name: "Salary",
     icon: BanknoteArrowUp,
     href: "/salary",
+  },
+  {
+    name: "History",
+    icon: History,
+    href: "/history",
   },
   {
     name: "Analytics",
