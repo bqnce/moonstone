@@ -3,6 +3,7 @@
 
 import { Copy, ExternalLink, LogOut, Plug, Loader2, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "react-hot-toast";
 import { TokenData } from "@/lib/wallets/phantom";
 import { TokenData as MetaMaskTokenData } from "@/lib/wallets/metamask";
 
@@ -61,10 +62,33 @@ export function WalletCard({
           "bg-purple-500/10 hover:bg-purple-500/20 text-purple-500 border border-purple-500/20",
       };
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    // Ide lehetne tenni egy toaster/értesítést
-  };
+      const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text);
+        
+        // Custom "Moonstone" stílusú toast
+        toast.success("Address copied to clipboard", {
+          duration: 3000,
+          position: "bottom-center",
+          
+          // A megjelenés testreszabása (Dark Mode)
+          style: {
+            background: "#18181b", // zinc-950
+            color: "#fff",
+            border: "1px solid #27272a", // zinc-800
+            padding: "12px 16px",
+            borderRadius: "12px",
+            fontSize: "0.875rem",
+            fontWeight: "500",
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+          },
+          
+          // Az ikon színe (Emerald zöld, hogy passzoljon az Online státuszhoz)
+          iconTheme: {
+            primary: "#10b981", // emerald-500
+            secondary: "#fff",
+          },
+        });
+      };
 
   return (
     <div

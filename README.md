@@ -61,6 +61,8 @@
 </details>
 
 <details>
+
+<details>
 <summary><strong>🚀 Changelog — 2026-01-05</strong></summary>
 
 ### ♻️ Architecture & Refactoring
@@ -84,5 +86,6 @@
 
 ### 🎨 UI/UX Improvements
 - **Sidebar Redesign:** Updated the user profile footer for a modern, sleek look (removed generic badges, improved avatar styling and hover states).
+- **Interactive Feedback:** Added a stylish `react-hot-toast` notification when copying wallet addresses to the clipboard.
 
 </details>

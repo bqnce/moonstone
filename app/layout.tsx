@@ -6,6 +6,7 @@ import { MetaMaskProvider } from "@metamask/sdk-react";
 import { WalletProvider } from "@/app/wallets/contexts/WalletContext";
 import { SessionProvider } from "next-auth/react";
 import { usePathname } from "next/navigation";
+import { Toaster } from "react-hot-toast";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -46,6 +47,7 @@ export default function RootLayout({
             </WalletProvider>
           </MetaMaskProvider>
         </SessionProvider>
+        <Toaster />
       </body>
     </html>
   );
