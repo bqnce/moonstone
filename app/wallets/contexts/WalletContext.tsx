@@ -1,8 +1,19 @@
+// src/app/wallets/contexts/WalletContext.tsx
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from "react";
 import { useSDK } from "@metamask/sdk-react";
-import { getEthBalanceWithUsd, TokenData as MetaMaskTokenData } from "@/lib/wallets/metamask";
+import {
+  fetchEthereumAssets,
+  TokenData as MetaMaskTokenData,
+} from "@/lib/wallets/metamask";
 import {
   getPhantomProvider,
   connectSolanaChain,
@@ -23,7 +34,7 @@ interface WalletContextType {
   metamaskTotalUsd: number;
   connectMetamask: () => Promise<void>;
   disconnectMetamask: () => void;
-  
+
   // Phantom
   phantomInstalled: boolean;
   phantomConnected: boolean;
@@ -33,7 +44,7 @@ interface WalletContextType {
   phantomTotalUsd: number;
   connectPhantom: () => Promise<void>;
   disconnectPhantomWallet: () => Promise<void>;
-  
+
   // Combined
   allTokens: (TokenData | MetaMaskTokenData)[];
   totalPortfolioValue: number;
@@ -43,28 +54,17 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [isMounted, setIsMounted] = useState(false);
-  
-  // MetaMask State
-  const [metamaskTokenData, setMetamaskTokenData] = useState<{
-    eth: MetaMaskTokenData | null;
-  }>({
-    eth: null,
-  });
+
+  // --- MetaMask State ---
+  const [metamaskTokensList, setMetamaskTokensList] = useState<MetaMaskTokenData[]>([]);
   const { sdk, connected, connecting, account } = useSDK();
 
-  // Phantom State
+  // --- Phantom State ---
   const [phantomInstalled, setPhantomInstalled] = useState<boolean>(false);
   const [phantomAddress, setPhantomAddress] = useState<string | null>(null);
   const [phantomConnecting, setPhantomConnecting] = useState<boolean>(false);
-  const [tokenData, setTokenData] = useState<{
-    sol: TokenData | null;
-    pengu: TokenData | null;
-    usdc: TokenData | null;
-  }>({
-    sol: null,
-    pengu: null,
-    usdc: null,
-  });
+  const [solBalanceData, setSolBalanceData] = useState<TokenData | null>(null);
+  const [phantomTokensList, setPhantomTokensList] = useState<TokenData[]>([]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -74,14 +74,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const fetchMetamaskBalance = useCallback(async () => {
     if (account) {
       try {
-        const ethData = await getEthBalanceWithUsd(account);
-        setMetamaskTokenData({ eth: ethData });
+        const assets = await fetchEthereumAssets(account);
+        setMetamaskTokensList(assets);
       } catch (err) {
-        console.error("Error fetching MetaMask balance:", err);
-        setMetamaskTokenData({ eth: null });
+        console.error("Error fetching MetaMask assets:", err);
+        setMetamaskTokensList([]);
       }
     } else {
-      setMetamaskTokenData({ eth: null });
+      setMetamaskTokensList([]);
     }
   }, [account]);
 
@@ -100,7 +100,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const disconnectMetamaskHandler = () => {
     if (sdk) {
       sdk.terminate();
-      setMetamaskTokenData({ eth: null });
+      setMetamaskTokensList([]);
     }
   };
 
@@ -110,27 +110,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       try {
         const connection = connectSolanaChain();
         const solData = await getSolBalance(connection, phantomAddress);
-        setTokenData((prev) => ({ ...prev, sol: solData }));
-
-        // Fetch all tokens and filter for PENGU and USDC
+        setSolBalanceData(solData);
         const allTokens = await fetchSolanaAssetsHelius(phantomAddress);
-        const penguToken = allTokens.find((t) => t.symbol === "PENGU");
-        const usdcToken = allTokens.find((t) => t.symbol === "USDC");
-
-        setTokenData((prev) => ({
-          ...prev,
-          pengu: penguToken || null,
-          usdc: usdcToken || null,
-        }));
+        setPhantomTokensList(allTokens);
       } catch (err) {
         console.error("Error syncing SOL balance:", err);
       }
     } else {
-      setTokenData({ sol: null, pengu: null, usdc: null });
+      setSolBalanceData(null);
+      setPhantomTokensList([]);
     }
   }, [phantomAddress]);
 
-  // Phantom Auto-Connect Effect
   useEffect(() => {
     if (isMounted) {
       setPhantomInstalled(!!getPhantomProvider());
@@ -149,7 +140,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [isMounted, syncPhantomBalance]);
 
-  // Phantom Periodic Sync Effect
   useEffect(() => {
     if (phantomAddress) {
       syncPhantomBalance();
@@ -165,7 +155,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         sessionStorage.removeItem("phantom_manual_disconnect");
       }
       const walletAddress = await connectPhantomWallet();
-
       if (walletAddress) {
         setPhantomAddress(walletAddress);
         await syncPhantomBalance();
@@ -182,38 +171,47 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       await disconnectPhantom();
       setPhantomAddress(null);
-      setTokenData({ sol: null, pengu: null, usdc: null });
+      setSolBalanceData(null);
+      setPhantomTokensList([]);
     } catch (err) {
       console.error("Error disconnecting Phantom:", err);
       setPhantomAddress(null);
-      setTokenData({ sol: null, pengu: null, usdc: null });
+      setSolBalanceData(null);
+      setPhantomTokensList([]);
     }
   };
 
-  // Calculate values
-  const metamaskTokens: MetaMaskTokenData[] = [];
-  if (metamaskTokenData.eth) metamaskTokens.push(metamaskTokenData.eth);
+  // --- Calculate Values & Sorting ---
 
-  const metamaskTotalUsd = metamaskTokens.reduce((total, token) => {
-    return total + (token.usdValue || 0);
-  }, 0);
+  // 1. MetaMask Data
+  const metamaskTokens = [...metamaskTokensList].sort((a, b) => (b.usdValue || 0) - (a.usdValue || 0));
 
+  // 🟢 KEREKÍTÉS: Total USD kerekítése 2 tizedesre
+  const rawMetamaskTotal = metamaskTokens.reduce((total, token) => total + (token.usdValue || 0), 0);
+  const metamaskTotalUsd = Number(rawMetamaskTotal.toFixed(2));
+
+  // 2. Phantom Data
   const phantomTokens: TokenData[] = [];
-  if (tokenData.sol) phantomTokens.push(tokenData.sol);
-  if (tokenData.pengu) phantomTokens.push(tokenData.pengu);
-  if (tokenData.usdc) phantomTokens.push(tokenData.usdc);
+  if (solBalanceData) phantomTokens.push(solBalanceData);
+  phantomTokens.push(...phantomTokensList);
+  
+  phantomTokens.sort((a, b) => (b.usdValue || 0) - (a.usdValue || 0));
 
-  const phantomTotalUsd = phantomTokens.reduce((total, token) => {
-    return total + (token.usdValue || 0);
-  }, 0);
+  // 🟢 KEREKÍTÉS: Phantom Total kerekítése
+  const rawPhantomTotal = phantomTokens.reduce((total, token) => total + (token.usdValue || 0), 0);
+  const phantomTotalUsd = Number(rawPhantomTotal.toFixed(2));
 
-  const allTokens = [...metamaskTokens, ...phantomTokens];
-  const totalPortfolioValue = metamaskTotalUsd + phantomTotalUsd;
+  // 3. Global Totals
+  const allTokens = [...metamaskTokens, ...phantomTokens].sort(
+    (a, b) => (b.usdValue || 0) - (a.usdValue || 0)
+  );
+
+  // 🟢 KEREKÍTÉS: A végső érték kerekítése
+  const totalPortfolioValue = Number((metamaskTotalUsd + phantomTotalUsd).toFixed(2));
 
   return (
     <WalletContext.Provider
       value={{
-        // MetaMask
         metamaskConnected: connected,
         metamaskConnecting: connecting,
         metamaskAccount: account || null,
@@ -221,8 +219,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         metamaskTotalUsd,
         connectMetamask,
         disconnectMetamask: disconnectMetamaskHandler,
-        
-        // Phantom
+
         phantomInstalled,
         phantomConnected: !!phantomAddress,
         phantomConnecting,
@@ -231,8 +228,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         phantomTotalUsd,
         connectPhantom: connectPhantomHandler,
         disconnectPhantomWallet: disconnectPhantomWalletHandler,
-        
-        // Combined
+
         allTokens,
         totalPortfolioValue,
       }}
@@ -249,4 +245,3 @@ export function useWallet() {
   }
   return context;
 }
-

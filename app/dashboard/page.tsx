@@ -2,12 +2,15 @@
 
 import React, { useEffect, useState } from "react";
 import { useWallet } from "@/app/wallets/contexts/WalletContext";
+import { useCurrencyRates } from "@/lib/currency";
 import { ManualAsset } from "./types";
-import { RATES, getTokenIcon } from "./utils";
+import { getTokenIcon } from "./utils";
 import NetLiquidityCard from "./_components/NetLiquidityCard";
 import TokenList from "./_components/TokenList";
 
 export default function DashboardPage() {
+
+  const { rates, loading: ratesLoading } = useCurrencyRates();
   // 1. Get Crypto Data from Wallet Context
   const { allTokens, totalPortfolioValue: cryptoTotalUsd } = useWallet();
 
@@ -31,9 +34,9 @@ export default function DashboardPage() {
           const totalUsd = assets.reduce((acc, curr) => {
             let usdVal = curr.balance;
             if (curr.currency === "HUF")
-              usdVal = curr.balance * RATES.HUF_TO_USD;
+              usdVal = curr.balance * rates.HUF_TO_USD;
             else if (curr.currency === "EUR")
-              usdVal = curr.balance * RATES.EUR_TO_USD;
+              usdVal = curr.balance * rates.EUR_TO_USD;
             return acc + usdVal;
           }, 0);
 
@@ -51,7 +54,7 @@ export default function DashboardPage() {
 
   // 4. Calculate Grand Totals (Crypto + Manual)
   const grandTotalUsd = cryptoTotalUsd + manualTotalUsd;
-  const grandTotalHuf = grandTotalUsd * RATES.USD_TO_HUF;
+const grandTotalHuf = grandTotalUsd * (rates?.USD_TO_HUF || 380);
 
   // Format tokens for display list
   const tokens = allTokens.map((token, index) => ({
@@ -85,7 +88,7 @@ export default function DashboardPage() {
         cryptoTotalUsd={cryptoTotalUsd}
         manualTotalUsd={manualTotalUsd}
         manualAccountCount={manualAccountCount}
-        loadingManual={loadingManual}
+        loadingManual={loadingManual || ratesLoading}
       />
 
       {/* Tokens Section */}

@@ -2,7 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSDK } from "@metamask/sdk-react";
-import { getEthBalanceWithUsd, TokenData as MetaMaskTokenData } from "@/lib/wallets/metamask";
+// 🟢 JAVÍTÁS: Az új függvény importálása
+import { 
+  fetchEthereumAssets, 
+  TokenData as MetaMaskTokenData 
+} from "@/lib/wallets/metamask";
 import {
   getPhantomProvider,
   connectSolanaChain,
@@ -22,26 +26,18 @@ export default function WalletsPage() {
   const [isMounted, setIsMounted] = useState(false);
   
   // --- MetaMask State ---
-  const [metamaskTokenData, setMetamaskTokenData] = useState<{
-    eth: MetaMaskTokenData | null;
-  }>({
-    eth: null,
-  });
+  // 🟢 JAVÍTÁS: Most már lista (tömb), nem egyetlen objektum
+  const [metamaskTokens, setMetamaskTokens] = useState<MetaMaskTokenData[]>([]);
   const { sdk, connected, connecting, account } = useSDK();
 
   // --- Phantom State ---
   const [phantomInstalled, setPhantomInstalled] = useState<boolean>(false);
   const [phantomAddress, setPhantomAddress] = useState<string | null>(null);
   const [phantomConnecting, setPhantomConnecting] = useState<boolean>(false);
-  const [tokenData, setTokenData] = useState<{
-    sol: TokenData | null;
-    pengu: TokenData | null;
-    usdc: TokenData | null;
-  }>({
-    sol: null,
-    pengu: null,
-    usdc: null,
-  });
+  
+  // Phantom dinamikus listák
+  const [solBalanceData, setSolBalanceData] = useState<TokenData | null>(null);
+  const [phantomTokensList, setPhantomTokensList] = useState<TokenData[]>([]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -52,14 +48,15 @@ export default function WalletsPage() {
   const fetchMetamaskBalance = useCallback(async () => {
     if (account) {
       try {
-        const ethData = await getEthBalanceWithUsd(account);
-        setMetamaskTokenData({ eth: ethData });
+        // 🟢 JAVÍTÁS: Az új függvény hívása
+        const assets = await fetchEthereumAssets(account);
+        setMetamaskTokens(assets);
       } catch (err) {
         console.error("Error fetching MetaMask balance:", err);
-        setMetamaskTokenData({ eth: null });
+        setMetamaskTokens([]);
       }
     } else {
-      setMetamaskTokenData({ eth: null });
+      setMetamaskTokens([]);
     }
   }, [account]);
 
@@ -78,7 +75,7 @@ export default function WalletsPage() {
   const disconnectMetamask = () => {
     if (sdk) {
       sdk.terminate();
-      setMetamaskTokenData({ eth: null });
+      setMetamaskTokens([]);
     }
   };
 
@@ -88,24 +85,21 @@ export default function WalletsPage() {
     if (phantomAddress) {
       try {
         const connection = connectSolanaChain();
+        
+        // 1. Get SOL Balance
         const solData = await getSolBalance(connection, phantomAddress);
-        setTokenData((prev) => ({ ...prev, sol: solData }));
+        setSolBalanceData(solData);
 
-        // Fetch all tokens and filter for PENGU and USDC
+        // 2. Fetch ALL tokens
         const allTokens = await fetchSolanaAssetsHelius(phantomAddress);
-        const penguToken = allTokens.find((t) => t.symbol === "PENGU");
-        const usdcToken = allTokens.find((t) => t.symbol === "USDC");
+        setPhantomTokensList(allTokens);
 
-        setTokenData((prev) => ({
-          ...prev,
-          pengu: penguToken || null,
-          usdc: usdcToken || null,
-        }));
       } catch (err) {
         console.error("Error syncing SOL balance:", err);
       }
     } else {
-      setTokenData({ sol: null, pengu: null, usdc: null });
+      setSolBalanceData(null);
+      setPhantomTokensList([]);
     }
   }, [phantomAddress]);
 
@@ -132,7 +126,7 @@ export default function WalletsPage() {
   useEffect(() => {
     if (phantomAddress) {
       syncPhantomBalance();
-      const interval = setInterval(syncPhantomBalance, 30 * 60 * 1000); // Sync every 30 minutes
+      const interval = setInterval(syncPhantomBalance, 30 * 60 * 1000); 
       return () => clearInterval(interval);
     }
   }, [phantomAddress, syncPhantomBalance]);
@@ -161,33 +155,41 @@ export default function WalletsPage() {
     try {
       await disconnectPhantom();
       setPhantomAddress(null);
-      setTokenData({ sol: null, pengu: null, usdc: null });
+      setSolBalanceData(null);
+      setPhantomTokensList([]);
     } catch (err) {
       console.error("Error disconnecting Phantom:", err);
       setPhantomAddress(null);
-      setTokenData({ sol: null, pengu: null, usdc: null });
+      setSolBalanceData(null);
+      setPhantomTokensList([]);
     }
   };
 
   // --- Data Preparation for UI ---
 
-  // MetaMask Tokens & Value
-  const metamaskTokens: MetaMaskTokenData[] = [];
-  if (metamaskTokenData.eth) metamaskTokens.push(metamaskTokenData.eth);
+  // 🟢 JAVÍTÁS: MetaMask Tokens (Már lista, csak rendezzük és összegezzük)
+  // Rendezés: legnagyobb érték elöl
+  const sortedMetamaskTokens = [...metamaskTokens].sort((a, b) => (b.usdValue || 0) - (a.usdValue || 0));
 
-  const metamaskTotalUsdValue = metamaskTokens.reduce((total, token) => {
+  const metamaskTotalUsdValue = sortedMetamaskTokens.reduce((total, token) => {
     return total + (token.usdValue || 0);
   }, 0);
 
-  const metamaskUsdBalance = !account || (account && metamaskTokens.length === 0)
+  const metamaskUsdBalance = !account || (account && sortedMetamaskTokens.length === 0)
     ? null
     : `$${metamaskTotalUsdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
   // Phantom Tokens & Value
   const phantomTokens: TokenData[] = [];
-  if (tokenData.sol) phantomTokens.push(tokenData.sol);
-  if (tokenData.pengu) phantomTokens.push(tokenData.pengu);
-  if (tokenData.usdc) phantomTokens.push(tokenData.usdc);
+  
+  if (solBalanceData) {
+    phantomTokens.push(solBalanceData);
+  }
+  
+  phantomTokens.push(...phantomTokensList);
+
+  // Rendezés: legnagyobb érték elöl
+  phantomTokens.sort((a, b) => (b.usdValue || 0) - (a.usdValue || 0));
 
   const totalUsdValue = phantomTokens.reduce((total, token) => {
     return total + (token.usdValue || 0);
@@ -210,7 +212,7 @@ export default function WalletsPage() {
       balance: metamaskUsdBalance,
       currency: "USD",
       explorerUrl: (addr: string) => `https://etherscan.io/address/${addr}`,
-      tokens: metamaskTokens.length > 0 ? metamaskTokens : undefined,
+      tokens: sortedMetamaskTokens.length > 0 ? sortedMetamaskTokens : undefined,
       onConnect: connectMetamask,
       onDisconnect: disconnectMetamask,
     },

@@ -59,3 +59,30 @@
 - **Refactor:** Decoupled `HistoryPage` fetching logic to support query-based filtering (`?source=SALARY`).
 
 </details>
+
+<details>
+<summary><strong>🚀 Changelog — 2026-01-05</strong></summary>
+
+### ♻️ Architecture & Refactoring
+- **Separation of Concerns:** Major refactor across `History`, `Salary`, `Login`, and `Wallets` pages.
+  - Split monolithic `page.tsx` files into **Logic Controllers** (state/fetching) and **UI Components** (presentation).
+  - UI components moved to dedicated `_components` folders for better maintainability and security.
+- **Directory Structure:** Standardized the project structure to follow the "Feature-Sliced" pattern.
+
+### 🦊 Wallets & Integrations
+- **Dynamic Token Detection:**
+  - **MetaMask:** Implemented **Alchemy Enhanced API** to automatically fetch and recognize all ERC-20 tokens held by the user (replacing hardcoded ETH-only logic).
+  - **Phantom:** Upgraded **Helius API** integration to dynamically list all SPL tokens (including custom tokens like $UNITY).
+- **Smart Sorting:** Token lists in the UI are now automatically sorted by **USD Value** (descending order).
+- **UI Polish:** Removed fractional digits from USD values for a cleaner, minimalist aesthetic (rounded to whole numbers).
+
+### 💱 Live Data & Currency
+- **Dynamic Exchange Rates:**
+  - Introduced `useCurrencyRates` hook to fetch live **USD/HUF** and **EUR/USD** rates via a public API.
+  - Replaced hardcoded exchange rate constants in `Dashboard` and `Accounts` pages.
+  - **Net Liquidity** calculation now reflects real-time market conditions automatically.
+
+### 🎨 UI/UX Improvements
+- **Sidebar Redesign:** Updated the user profile footer for a modern, sleek look (removed generic badges, improved avatar styling and hover states).
+
+</details>
