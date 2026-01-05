@@ -60,7 +60,7 @@
 
 </details>
 
-<details>
+---
 
 <details>
 <summary><strong>🚀 Changelog — 2026-01-05</strong></summary>
