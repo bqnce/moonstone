@@ -3,7 +3,7 @@
 import "./globals.css";
 import Sidebar from "@/components/sidebar";
 import { MetaMaskProvider } from "@metamask/sdk-react";
-import { WalletProvider } from "@/contexts/WalletContext";
+import { WalletProvider } from "@/app/wallets/contexts/WalletContext";
 import { SessionProvider } from "next-auth/react";
 import { usePathname } from "next/navigation";
 
