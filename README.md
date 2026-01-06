@@ -89,3 +89,32 @@
 - **Interactive Feedback:** Added a stylish `react-hot-toast` notification when copying wallet addresses to the clipboard.
 
 </details>
+
+<details>
+<summary><strong>🚀 Changelog — 2026-01-06</strong></summary>
+
+### 🔐 Authentication
+- **New Register Page:** Built a fully component-based `/register` page matching the Login design system (Header, Form, Footer) with smooth entrance animations.
+- **Layout Control:** Updated `ClientLayout` to strictly hide the Sidebar on the registration route.
+
+### 💸 Accounts & Assets
+- **Full CRUD System:**
+  - **Create:** Added `AddAssetModal` with custom-built dropdowns (replacing native select) and clean number inputs.
+  - **Delete:** Implemented quick-delete functionality via the asset card context menu with Toast feedback.
+  - **Update:** Refactored `EditBalanceModal` for seamless balance adjustments.
+- **UI/UX Improvements:**
+  - **Smart Grouping:** Assets are now visually categorized (Bank, Cash, Investment) instead of a flat list.
+  - **Onboarding:** Designed high-quality "Empty State" cards guiding new users to add assets or connect wallets.
+  - **Interactivity:** Implemented "click-outside" logic to automatically close Modals and Dropdowns.
+
+### 🦊 Wallets
+- **Smart Connection Grid:**
+  - **Dynamic View:** Displays large "Connect" onboarding cards when disconnected, switching to detailed Asset cards upon connection.
+  - **Visual Polish:** Replaced generic emojis with high-quality **MetaMask & Phantom logos** with proper fallback logic.
+  - **Layout:** Removed internal scrollbars from token lists; cards now expand dynamically to fit content.
+
+### ⚙️ Core & Backend
+- **Currency System:** Implemented a standalone `useCurrency` hook (localStorage based) to toggle global display between **USD** and **HUF**.
+- **API Expansion:** Added robust `POST` and `DELETE` endpoints to `/api/accounts` for manual asset management.
+
+</details>

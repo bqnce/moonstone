@@ -1,27 +1,73 @@
-import React from "react";
-import { Loader2, Check, X } from "lucide-react";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { Loader2, Check, X } from "lucide-react"; // Trash2 kivéve
+import { toast } from "react-hot-toast";
 import { ManualAsset } from "../types";
 
 interface EditBalanceModalProps {
-  asset: ManualAsset;
-  newBalance: string;
-  setNewBalance: (val: string) => void;
+  isOpen: boolean;
   onClose: () => void;
-  onSave: () => void;
-  isSaving: boolean;
+  asset: ManualAsset;
+  onSuccess: () => void;
 }
 
 export default function EditBalanceModal({
-  asset,
-  newBalance,
-  setNewBalance,
+  isOpen,
   onClose,
-  onSave,
-  isSaving,
+  asset,
+  onSuccess,
 }: EditBalanceModalProps) {
+  const [newBalance, setNewBalance] = useState(asset.balance.toString());
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Input frissítése, ha változik az asset
+  useEffect(() => {
+    setNewBalance(asset.balance.toString());
+  }, [asset]);
+
+  if (!isOpen) return null;
+
+  // --- MENTÉS ---
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/accounts", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: asset._id,
+          newBalance: newBalance,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update");
+
+      toast.success("Balance updated successfully");
+      onSuccess();
+      onClose();
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to update balance");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl p-6 relative">
+    // 1. KÜLSŐ DIV: Erre kattintva hívjuk meg az onClose-t (Backdrop click)
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+      onClick={onClose} 
+    >
+      {/* 2. BELSŐ DIV: Megállítjuk a kattintás terjedését (stopPropagation), 
+          hogy ha a modalra kattintasz, ne záródjon be */}
+      <div 
+        className="bg-zinc-900 border border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl p-6 relative"
+        onClick={(e) => e.stopPropagation()} 
+      >
+        
+        {/* Bezárás gomb (X) */}
         <button
           onClick={onClose}
           className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors cursor-pointer"
@@ -45,7 +91,8 @@ export default function EditBalanceModal({
                 type="number"
                 value={newBalance}
                 onChange={(e) => setNewBalance(e.target.value)}
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-4 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-xl font-mono"
+                // Nyilak eltüntetése + stílus
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg pl-4 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-xl font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 placeholder="0.00"
                 autoFocus
               />
@@ -53,16 +100,21 @@ export default function EditBalanceModal({
           </div>
 
           <div className="flex gap-3 pt-2">
+            {/* TÖRLÉS GOMB KIVÉVE */}
+            
+            {/* Mégse gomb */}
             <button
               onClick={onClose}
               className="flex-1 px-4 py-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-medium transition-colors text-sm cursor-pointer"
             >
               Cancel
             </button>
+
+            {/* Mentés gomb */}
             <button
-              onClick={onSave}
+              onClick={handleSave}
               disabled={isSaving}
-              className="flex-1 px-4 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 text-sm cursor-pointer"
+              className="flex-1 px-4 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isSaving ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

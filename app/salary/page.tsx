@@ -92,7 +92,7 @@ export default function SalaryPage() {
   };
 
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 animate-in fade-in duration-700">
+    <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 animate-in fade-in zoom-in-95 duration-500">
       
       <SalaryHeader />
 

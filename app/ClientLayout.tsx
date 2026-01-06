@@ -7,12 +7,13 @@ import { SessionProvider } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { Toaster } from "react-hot-toast";
 
-// Ez a belső komponens kezeli a sidebar elrejtést
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLoginPage = pathname === "/login";
+  
+  // ITT A VÁLTOZÁS: Bővítjük a listát a registerrel
+  const isAuthPage = pathname === "/login" || pathname === "/register";
 
-  if (isLoginPage) {
+  if (isAuthPage) {
     return <>{children}</>;
   }
 
@@ -24,28 +25,23 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-// Ez a fő wrapper, ami a providereket tartalmazza
-export default function ClientLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function ClientLayout({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <MetaMaskProvider
-        debug={false}
-        sdkOptions={{
-          dappMetadata: {
-            name: "Moonstone",
-            url: typeof window !== "undefined" ? window.location.href : "",
-          },
-        }}
-      >
-        <WalletProvider>
-          <LayoutContent>{children}</LayoutContent>
-        </WalletProvider>
-      </MetaMaskProvider>
-      <Toaster />
+        <MetaMaskProvider
+          debug={false}
+          sdkOptions={{
+            dappMetadata: {
+              name: "Moonstone",
+              url: typeof window !== "undefined" ? window.location.href : "",
+            },
+          }}
+        >
+          <WalletProvider>
+            <LayoutContent>{children}</LayoutContent>
+          </WalletProvider>
+        </MetaMaskProvider>
+        <Toaster />
     </SessionProvider>
   );
 }

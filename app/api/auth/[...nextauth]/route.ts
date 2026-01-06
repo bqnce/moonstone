@@ -1,49 +1,50 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { connectToDatabase } from "@/lib/database/connection";
+import { User } from "@/lib/database/models/user"; // Fontos: a User model importálása
+import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        username: { label: "Username", type: "text" },
+        email: { label: "Email", type: "email" }, // Username helyett már Emailt kérünk
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) {
-          return null;
+        // 1. Validáció
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error("Invalid credentials");
         }
 
         try {
-          const mongooseInstance = await connectToDatabase();
-          const db = mongooseInstance.connection.db;
+          await connectToDatabase();
 
-          if (!db) {
-            throw new Error("Database connection failed");
+          // 2. Felhasználó keresése Email alapján
+          // A .select("+password") kell, mert a User sémában a jelszó "select: false"
+          const user = await User.findOne({ email: credentials.email }).select("+password");
+
+          if (!user || !user.password) {
+            throw new Error("Invalid credentials");
           }
 
-          const usersCollection = db.collection("users");
-
-          const user = await usersCollection.findOne({
-            username: credentials.username,
-          });
-
-          if (!user) {
-            return null;
-          }
-
-          // Simple password comparison (plain text as per requirements)
-          const isPasswordValid = user.password === credentials.password;
+          // 3. Jelszó összehasonlítás (Hash vs Plaintext)
+          const isPasswordValid = await bcrypt.compare(
+            credentials.password,
+            user.password
+          );
 
           if (!isPasswordValid) {
-            return null;
+            throw new Error("Invalid credentials");
           }
 
+          // 4. Sikeres belépés -> Visszaadjuk a user objektumot
           return {
             id: user._id.toString(),
-            name: user.username,
-            email: user.email || null,
+            name: user.name,
+            email: user.email,
+            image: user.image,
           };
         } catch (error) {
           console.error("Auth error:", error);
@@ -56,7 +57,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   pages: {
-    signIn: "/login",
+    signIn: "/login", // Ha nincs bejelentkezve, ide dobjon
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -70,7 +71,7 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user = {
           ...session.user,
-          id: token.id as string,
+          id: token.id as string, // Hozzáadjuk az ID-t a sessionhöz
           name: token.name as string,
         };
       }

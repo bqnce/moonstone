@@ -29,7 +29,7 @@ export default function HistoryPage() {
   }, [selectedSource]);
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto min-h-screen animate-in fade-in duration-700">
+    <div className="p-6 md:p-8 max-w-7xl mx-auto min-h-screen animate-in fade-in zoom-in-95 duration-500">
       
       {/* Header & Filters */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">

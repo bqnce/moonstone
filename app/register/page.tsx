@@ -1,20 +1,18 @@
 import React from "react";
-import LoginHeader from "./_components/LoginHeader";
-import LoginForm from "./_components/LoginForm";
-import LoginFooter from "./_components/LoginFooter";
+import RegisterHeader from "./_components/RegisterHeader";
+import RegisterForm from "./_components/RegisterForm";
+import RegisterFooter from "./_components/RegisterFooter";
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-black relative overflow-hidden">
-      {/* Background Effects */}
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-emerald-500/20 rounded-full blur-[128px] pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-[128px] pointer-events-none" />
 
-      {/* Main Container */}
       <div className="w-full max-w-md p-8 relative z-10 animate-in fade-in zoom-in-95 duration-500">
-        <LoginHeader />
-        <LoginForm />
-        <LoginFooter />
+        <RegisterHeader />
+        <RegisterForm />
+        <RegisterFooter />
       </div>
     </div>
   );

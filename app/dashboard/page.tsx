@@ -69,7 +69,7 @@ const grandTotalHuf = grandTotalUsd * (rates?.USD_TO_HUF || 380);
   }));
 
   return (
-    <div className="p-8 space-y-8 max-w-7xl mx-auto animate-in fade-in duration-500">
+    <div className="p-8 space-y-8 max-w-7xl mx-auto animate-in fade-in zoom-in-95 duration-500">
       
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
