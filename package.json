@@ -16,6 +16,7 @@
     "@solana/web3.js": "^1.98.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "ethers": "^6.16.0",
     "framer-motion": "^12.23.26",
     "lucide-react": "^0.560.0",
@@ -26,6 +27,7 @@
     "react": "19.2.1",
     "react-dom": "19.2.1",
     "react-hot-toast": "^2.6.0",
+    "recharts": "^3.6.0",
     "tailwind-merge": "^3.4.0",
     "viem": "^2.41.2",
     "wagmi": "^3.1.0"
