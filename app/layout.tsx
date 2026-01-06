@@ -1,28 +1,16 @@
-"use client";
-
+import type { Metadata } from "next";
 import "./globals.css";
-import Sidebar from "@/components/sidebar";
-import { MetaMaskProvider } from "@metamask/sdk-react";
-import { WalletProvider } from "@/app/wallets/contexts/WalletContext";
-import { SessionProvider } from "next-auth/react";
-import { usePathname } from "next/navigation";
-import { Toaster } from "react-hot-toast";
+import ClientLayout from "./ClientLayout"; // Beimportáljuk az előbb létrehozott fájlt
+import logo from "@/images/logo.png";
 
-function LayoutContent({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isLoginPage = pathname === "/login";
-
-  if (isLoginPage) {
-    return <>{children}</>;
-  }
-
-  return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-      <main className="flex-1 ml-64">{children}</main>
-    </div>
-  );
-}
+// Itt állítjuk be az oldal nevét és ikonját
+export const metadata: Metadata = {
+  title: "moonstone",
+  description: "moonstone Application",
+  icons: {
+    icon: logo.src,
+  },
+};
 
 export default function RootLayout({
   children,
@@ -32,22 +20,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body>
-        <SessionProvider>
-          <MetaMaskProvider
-            debug={false}
-            sdkOptions={{
-              dappMetadata: {
-                name: "Moonstone",
-                url: typeof window !== "undefined" ? window.location.href : "",
-              },
-            }}
-          >
-            <WalletProvider>
-              <LayoutContent>{children}</LayoutContent>
-            </WalletProvider>
-          </MetaMaskProvider>
-        </SessionProvider>
-        <Toaster />
+        <ClientLayout>
+            {children}
+        </ClientLayout>
       </body>
     </html>
   );
